@@ -10,13 +10,22 @@ type Detector interface {
 type Result struct {
 	DetectorName string
 	Issues       []Issue
+	Flags        []Flag
 	WastedTokens int
 }
 
 // Issue is a single problem found in the prompt.
 type Issue struct {
-	Type       string // "filler", "redundancy", "meta_commentary", "context_dumping"
+	Type       string // "filler", "meta_commentary", "context_dumping"
 	Match      string // the matched text
 	Suggestion string // what to do instead
 	Tokens     int    // tokens wasted by this match
+}
+
+// Flag is a qualitative signal that indicates the prompt may benefit from
+// Layer 2 analysis. Flags do not carry token counts — Layer 2 estimates them.
+type Flag struct {
+	Type        string // "vague_reference", "over_specification"
+	Match       string // the matched text
+	Description string // human-readable explanation
 }
