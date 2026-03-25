@@ -1,6 +1,10 @@
 package tokenizer
 
-import "github.com/pkoukk/tiktoken-go"
+import (
+	"fmt"
+
+	"github.com/pkoukk/tiktoken-go"
+)
 
 // Counter counts tokens in text.
 type Counter struct {
@@ -12,7 +16,7 @@ type Counter struct {
 func New() (*Counter, error) {
 	enc, err := tiktoken.GetEncoding("cl100k_base")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to load tiktoken encoding: %w", err)
 	}
 	return &Counter{enc: enc}, nil
 }

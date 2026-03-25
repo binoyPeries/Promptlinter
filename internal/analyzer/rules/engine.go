@@ -1,16 +1,27 @@
 package rules
 
 import (
+	"fmt"
 	"sync"
 
 	"promptlinter/internal/tokenizer"
 )
 
-// Thresholds for engine recommendations.
-const (
-	tipThreshold      = 20  // wasted tokens >= this → RecommendTip
-	escalateThreshold = 100 // wasted tokens >= this → RecommendEscalate
-)
+// EngineConfig holds configurable thresholds for the engine.
+type EngineConfig struct {
+	TipThreshold      int  // wasted tokens >= this → RecommendTip
+	EscalateThreshold int  // wasted tokens >= this → RecommendEscalate
+	EscalateOnFlags   bool // whether indirect flags trigger escalation
+}
+
+// DefaultEngineConfig returns the standard thresholds.
+func DefaultEngineConfig() EngineConfig {
+	return EngineConfig{
+		TipThreshold:      20,
+		EscalateThreshold: 100,
+		EscalateOnFlags:   true,
+	}
+}
 
 // Recommendation indicates what action to take based on analysis results.
 type Recommendation int
@@ -37,20 +48,38 @@ func (r Recommendation) String() string {
 // EngineResult is the aggregate output from running all detectors.
 type EngineResult struct {
 	TotalWastedTokens int
-	AllIssues         []Issue
-	AllFlags          []Flag
 	Results           []*Result
 	Recommendation    Recommendation
+}
+
+// Issues flattens all issues from all detector results.
+func (er *EngineResult) Issues() []Issue {
+	var out []Issue
+	for _, r := range er.Results {
+		out = append(out, r.Issues...)
+	}
+	return out
+}
+
+// Flags flattens all flags from all detector results.
+func (er *EngineResult) Flags() []Flag {
+	var out []Flag
+	for _, r := range er.Results {
+		out = append(out, r.Flags...)
+	}
+	return out
 }
 
 // Engine runs all detectors in parallel and aggregates results.
 type Engine struct {
 	detectors []Detector
+	cfg       EngineConfig
 }
 
 // NewEngine creates an Engine with the standard set of detectors.
-func NewEngine(counter *tokenizer.Counter) *Engine {
+func NewEngine(counter *tokenizer.Counter, cfg EngineConfig) *Engine {
 	return &Engine{
+		cfg: cfg,
 		detectors: []Detector{
 			NewFillerDetector(counter),
 			NewMetaCommentaryDetector(counter),
@@ -61,6 +90,7 @@ func NewEngine(counter *tokenizer.Counter) *Engine {
 }
 
 type detectorOutput struct {
+	name   string
 	result *Result
 	err    error
 }
@@ -75,7 +105,7 @@ func (e *Engine) Run(prompt string) (*EngineResult, error) {
 		go func(det Detector) {
 			defer wg.Done()
 			r, err := det.Detect(prompt)
-			ch <- detectorOutput{result: r, err: err}
+			ch <- detectorOutput{name: det.Name(), result: r, err: err}
 		}(d)
 	}
 
@@ -86,24 +116,25 @@ func (e *Engine) Run(prompt string) (*EngineResult, error) {
 
 	for out := range ch {
 		if out.err != nil {
-			return nil, out.err
+			return nil, fmt.Errorf("detector %q failed: %w", out.name, out.err)
 		}
 		engineResult.Results = append(engineResult.Results, out.result)
 		engineResult.TotalWastedTokens += out.result.WastedTokens
-		engineResult.AllIssues = append(engineResult.AllIssues, out.result.Issues...)
-		engineResult.AllFlags = append(engineResult.AllFlags, out.result.Flags...)
 	}
 
-	engineResult.Recommendation = recommend(engineResult.TotalWastedTokens, engineResult.AllFlags)
+	engineResult.Recommendation = e.recommend(engineResult.TotalWastedTokens, engineResult.Flags())
 
 	return engineResult, nil
 }
 
-func recommend(wastedTokens int, flags []Flag) Recommendation {
-	if len(flags) > 0 || wastedTokens >= escalateThreshold {
+func (e *Engine) recommend(wastedTokens int, flags []Flag) Recommendation {
+	if wastedTokens >= e.cfg.EscalateThreshold {
 		return RecommendEscalate
 	}
-	if wastedTokens >= tipThreshold {
+	if e.cfg.EscalateOnFlags && len(flags) > 0 {
+		return RecommendEscalate
+	}
+	if wastedTokens >= e.cfg.TipThreshold {
 		return RecommendTip
 	}
 	return RecommendLog

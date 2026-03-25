@@ -14,7 +14,7 @@ func newTestEngine(t *testing.T) *Engine {
 	if err != nil {
 		t.Fatalf("failed to create tokenizer: %v", err)
 	}
-	return NewEngine(counter)
+	return NewEngine(counter, DefaultEngineConfig())
 }
 
 func TestEngine_CleanPrompt(t *testing.T) {
@@ -55,7 +55,8 @@ func TestEngine_MildFiller_RecommendTip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if result.TotalWastedTokens < tipThreshold {
+	defaults := DefaultEngineConfig()
+	if result.TotalWastedTokens < defaults.TipThreshold {
 		t.Skipf("wasted tokens (%d) below tip threshold, adjust prompt", result.TotalWastedTokens)
 	}
 	if result.Recommendation != RecommendTip && result.Recommendation != RecommendEscalate {
@@ -80,7 +81,8 @@ func TestEngine_HeavyWaste_RecommendEscalate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if result.TotalWastedTokens < escalateThreshold {
+	defaults := DefaultEngineConfig()
+	if result.TotalWastedTokens < defaults.EscalateThreshold {
 		t.Skipf("wasted tokens (%d) below escalate threshold", result.TotalWastedTokens)
 	}
 	if result.Recommendation != RecommendEscalate {
@@ -96,7 +98,7 @@ func TestEngine_IndirectFlags_RecommendEscalate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(result.AllFlags) == 0 {
+	if len(result.Flags()) == 0 {
 		t.Fatal("expected indirect flags, got none")
 	}
 	if result.Recommendation != RecommendEscalate {
@@ -128,10 +130,10 @@ func TestEngine_AggregatesIssuesAndFlags(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(result.AllIssues) == 0 {
+	if len(result.Issues()) == 0 {
 		t.Error("expected issues from filler detector")
 	}
-	if len(result.AllFlags) == 0 {
+	if len(result.Flags()) == 0 {
 		t.Error("expected flags from indirect flags detector")
 	}
 }
