@@ -79,17 +79,23 @@ func Decide(cfg *config.Config, ar *analyzer.AnalysisResult) *Result {
 	}
 }
 
-// formatFeedback produces a unified feedback string showing issues and flags.
+// formatFeedback produces a feedback string with separate sections for
+// token waste (issues) and structural warnings (flags).
 func formatFeedback(result *analyzer.AnalysisResult) string {
 	var parts []string
-	parts = append(parts, fmt.Sprintf("[PromptLinter] ~%d tokens wasted.", result.WastedTokens))
 
-	for _, issue := range result.Issues {
-		parts = append(parts, fmt.Sprintf("  - %s: %q → %s", issue.Type, issue.Match, issue.Suggestion))
+	if len(result.Issues) > 0 {
+		parts = append(parts, fmt.Sprintf("[PromptLinter] ~%d tokens wasted.", result.WastedTokens))
+		for _, issue := range result.Issues {
+			parts = append(parts, fmt.Sprintf("  - %s: %q → %s", issue.Type, issue.Match, issue.Suggestion))
+		}
 	}
 
-	for _, flag := range result.Flags {
-		parts = append(parts, fmt.Sprintf("  - Warning: %s", flag.Description))
+	if len(result.Flags) > 0 {
+		parts = append(parts, "[PromptLinter] Prompt quality warnings:")
+		for _, flag := range result.Flags {
+			parts = append(parts, fmt.Sprintf("  - %s", flag.Description))
+		}
 	}
 
 	return strings.Join(parts, "\n")
