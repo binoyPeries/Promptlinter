@@ -1,0 +1,134 @@
+package decision
+
+import (
+	"testing"
+
+	"promptlinter/internal/analyzer"
+	"promptlinter/internal/analyzer/rules"
+	"promptlinter/internal/config"
+)
+
+func modeCfg(mode string) *config.Config {
+	c := config.DefaultConfig()
+	c.Mode = mode
+	return c
+}
+
+func makeResult(wasted int, issues []rules.Issue, flags []rules.Flag) *analyzer.AnalysisResult {
+	return &analyzer.AnalysisResult{
+		TotalTokens:  100,
+		WastedTokens: wasted,
+		Issues:       issues,
+		Flags:        flags,
+	}
+}
+
+var sampleIssues = []rules.Issue{
+	{Type: "filler", Match: "please", Suggestion: "Drop \"please\"", Tokens: 1},
+}
+
+var sampleFlags = []rules.Flag{
+	{Type: "vague_reference", Match: "the file", Description: "No file path specified"},
+}
+
+// --- Silent mode: always pass ---
+
+func TestDecide_SilentMode(t *testing.T) {
+	for _, wasted := range []int{0, 30, 150} {
+		r := Decide(modeCfg("silent"), makeResult(wasted, sampleIssues, sampleFlags))
+		if r.Action != ActionPass {
+			t.Errorf("silent/wasted=%d: action = %d, want ActionPass", wasted, r.Action)
+		}
+	}
+}
+
+// --- Suggest mode: feedback to stderr based on thresholds ---
+
+func TestDecide_SuggestMode_LowWaste(t *testing.T) {
+	r := Decide(modeCfg("suggest"), makeResult(5, nil, nil))
+	if r.Action != ActionPass {
+		t.Errorf("action = %d, want ActionPass", r.Action)
+	}
+}
+
+func TestDecide_SuggestMode_MildWaste(t *testing.T) {
+	r := Decide(modeCfg("suggest"), makeResult(30, sampleIssues, nil))
+	if r.Action != ActionTip {
+		t.Errorf("action = %d, want ActionTip", r.Action)
+	}
+	if r.Tip == "" {
+		t.Error("tip is empty")
+	}
+	if r.Block != nil {
+		t.Error("block should be nil for suggest mode")
+	}
+}
+
+func TestDecide_SuggestMode_FlagsOnly(t *testing.T) {
+	// Low waste but flags present — should still show feedback.
+	r := Decide(modeCfg("suggest"), makeResult(5, nil, sampleFlags))
+	if r.Action != ActionTip {
+		t.Errorf("action = %d, want ActionTip for flags", r.Action)
+	}
+}
+
+func TestDecide_SuggestMode_HighWaste(t *testing.T) {
+	r := Decide(modeCfg("suggest"), makeResult(120, sampleIssues, sampleFlags))
+	if r.Action != ActionTip {
+		t.Errorf("action = %d, want ActionTip", r.Action)
+	}
+	if r.Tip == "" {
+		t.Error("tip is empty")
+	}
+}
+
+// --- Auto mode: block on high waste/flags, pass otherwise ---
+
+func TestDecide_AutoMode_LowWaste(t *testing.T) {
+	r := Decide(modeCfg("auto"), makeResult(5, nil, nil))
+	if r.Action != ActionPass {
+		t.Errorf("action = %d, want ActionPass", r.Action)
+	}
+}
+
+func TestDecide_AutoMode_MildWaste(t *testing.T) {
+	// Below escalation threshold, no flags — pass in auto.
+	r := Decide(modeCfg("auto"), makeResult(30, sampleIssues, nil))
+	if r.Action != ActionPass {
+		t.Errorf("action = %d, want ActionPass (below escalation threshold)", r.Action)
+	}
+}
+
+func TestDecide_AutoMode_HighWaste(t *testing.T) {
+	r := Decide(modeCfg("auto"), makeResult(120, sampleIssues, nil))
+	if r.Action != ActionBlock {
+		t.Errorf("action = %d, want ActionBlock", r.Action)
+	}
+	if r.Block == nil {
+		t.Fatal("block is nil")
+	}
+	if r.Block.Decision != "block" {
+		t.Errorf("decision = %q, want \"block\"", r.Block.Decision)
+	}
+	if r.Block.Reason == "" {
+		t.Error("reason is empty")
+	}
+}
+
+func TestDecide_AutoMode_FlagsBlock(t *testing.T) {
+	// Low waste but flags present — should block in auto with EscalateOnFlags.
+	r := Decide(modeCfg("auto"), makeResult(5, nil, sampleFlags))
+	if r.Action != ActionBlock {
+		t.Errorf("action = %d, want ActionBlock due to flags", r.Action)
+	}
+}
+
+func TestDecide_AutoMode_FlagsDisabled(t *testing.T) {
+	cfg := modeCfg("auto")
+	cfg.EscalateOnIndirectFlags = false
+	// Low waste + flags, but EscalateOnFlags is off — should pass.
+	r := Decide(cfg, makeResult(5, nil, sampleFlags))
+	if r.Action != ActionPass {
+		t.Errorf("action = %d, want ActionPass with flags disabled", r.Action)
+	}
+}

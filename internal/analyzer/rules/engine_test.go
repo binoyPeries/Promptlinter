@@ -14,7 +14,7 @@ func newTestEngine(t *testing.T) *Engine {
 	if err != nil {
 		t.Fatalf("failed to create tokenizer: %v", err)
 	}
-	return NewEngine(counter, DefaultEngineConfig())
+	return NewEngine(counter)
 }
 
 func TestEngine_CleanPrompt(t *testing.T) {
@@ -23,11 +23,14 @@ func TestEngine_CleanPrompt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if result.Recommendation != RecommendLog {
-		t.Errorf("expected RecommendLog, got %s", result.Recommendation)
-	}
 	if result.TotalWastedTokens != 0 {
 		t.Errorf("expected 0 wasted tokens, got %d", result.TotalWastedTokens)
+	}
+	if len(result.Issues()) != 0 {
+		t.Errorf("expected 0 issues, got %d", len(result.Issues()))
+	}
+	if len(result.Flags()) != 0 {
+		t.Errorf("expected 0 flags, got %d", len(result.Flags()))
 	}
 }
 
@@ -42,9 +45,8 @@ func TestEngine_AllDetectorsRun(t *testing.T) {
 	}
 }
 
-func TestEngine_MildFiller_RecommendTip(t *testing.T) {
+func TestEngine_FillerDetected(t *testing.T) {
 	e := newTestEngine(t)
-	// Stack many distinct filler + meta-commentary patterns to cross 20 tokens.
 	prompt := "Hello, I was wondering if you could please help me out with something. " +
 		"Let me explain what I need here. Here's what I want you to do. " +
 		"What I'm trying to do is the following. I have a question about this. " +
@@ -55,16 +57,15 @@ func TestEngine_MildFiller_RecommendTip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	defaults := DefaultEngineConfig()
-	if result.TotalWastedTokens < defaults.TipThreshold {
-		t.Skipf("wasted tokens (%d) below tip threshold, adjust prompt", result.TotalWastedTokens)
+	if result.TotalWastedTokens == 0 {
+		t.Error("expected wasted tokens > 0")
 	}
-	if result.Recommendation != RecommendTip && result.Recommendation != RecommendEscalate {
-		t.Errorf("expected RecommendTip or RecommendEscalate, got %s (wasted: %d)", result.Recommendation, result.TotalWastedTokens)
+	if len(result.Issues()) == 0 {
+		t.Error("expected issues from filler/meta detectors")
 	}
 }
 
-func TestEngine_HeavyWaste_RecommendEscalate(t *testing.T) {
+func TestEngine_HeavyWaste(t *testing.T) {
 	e := newTestEngine(t)
 
 	// Large fenced code block (60 lines) triggers context_dump.
@@ -81,44 +82,20 @@ func TestEngine_HeavyWaste_RecommendEscalate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	defaults := DefaultEngineConfig()
-	if result.TotalWastedTokens < defaults.EscalateThreshold {
-		t.Skipf("wasted tokens (%d) below escalate threshold", result.TotalWastedTokens)
-	}
-	if result.Recommendation != RecommendEscalate {
-		t.Errorf("expected RecommendEscalate, got %s", result.Recommendation)
+	if result.TotalWastedTokens < 100 {
+		t.Skipf("wasted tokens (%d) lower than expected for heavy paste", result.TotalWastedTokens)
 	}
 }
 
-func TestEngine_IndirectFlags_RecommendEscalate(t *testing.T) {
+func TestEngine_IndirectFlags(t *testing.T) {
 	e := newTestEngine(t)
-	// Vague prompt — flags should trigger escalation even with 0 wasted tokens.
 	prompt := "Fix the bug in the file"
 	result, err := e.Run(prompt)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(result.Flags()) == 0 {
-		t.Fatal("expected indirect flags, got none")
-	}
-	if result.Recommendation != RecommendEscalate {
-		t.Errorf("expected RecommendEscalate due to flags, got %s", result.Recommendation)
-	}
-}
-
-func TestEngine_RecommendationString(t *testing.T) {
-	tests := []struct {
-		r    Recommendation
-		want string
-	}{
-		{RecommendLog, "log"},
-		{RecommendTip, "tip"},
-		{RecommendEscalate, "escalate"},
-	}
-	for _, tt := range tests {
-		if got := tt.r.String(); got != tt.want {
-			t.Errorf("Recommendation(%d).String() = %q, want %q", tt.r, got, tt.want)
-		}
+		t.Error("expected indirect flags for vague prompt")
 	}
 }
 

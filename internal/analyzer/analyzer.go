@@ -10,17 +10,17 @@ import (
 
 // AnalysisResult is the full output from analyzing a prompt.
 type AnalysisResult struct {
-	TotalTokens    int
-	WastedTokens   int
-	Issues         []rules.Issue
-	Flags          []rules.Flag
-	Recommendation rules.Recommendation
+	TotalTokens  int
+	WastedTokens int
+	Issues       []rules.Issue
+	Flags        []rules.Flag
 }
 
 // Analyzer orchestrates Layer 1 (and eventually Layer 2) analysis.
 type Analyzer struct {
 	engine  *rules.Engine
 	counter *tokenizer.Counter
+	cfg     *config.Config
 }
 
 // New creates an Analyzer from the given config.
@@ -30,15 +30,10 @@ func New(cfg *config.Config) (*Analyzer, error) {
 		return nil, fmt.Errorf("failed to init tokenizer: %w", err)
 	}
 
-	engineCfg := rules.EngineConfig{
-		TipThreshold:      cfg.TipThreshold,
-		EscalateThreshold: cfg.EscalationThreshold,
-		EscalateOnFlags:   cfg.EscalateOnIndirectFlags,
-	}
-
 	return &Analyzer{
-		engine:  rules.NewEngine(counter, engineCfg),
+		engine:  rules.NewEngine(counter),
 		counter: counter,
+		cfg:     cfg,
 	}, nil
 }
 
@@ -50,10 +45,9 @@ func (a *Analyzer) Analyze(prompt string) (*AnalysisResult, error) {
 	}
 
 	return &AnalysisResult{
-		TotalTokens:    a.counter.Count(prompt),
-		WastedTokens:   er.TotalWastedTokens,
-		Issues:         er.Issues(),
-		Flags:          er.Flags(),
-		Recommendation: er.Recommendation,
+		TotalTokens:  a.counter.Count(prompt),
+		WastedTokens: er.TotalWastedTokens,
+		Issues:       er.Issues(),
+		Flags:        er.Flags(),
 	}, nil
 }

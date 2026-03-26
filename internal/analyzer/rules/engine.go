@@ -7,49 +7,10 @@ import (
 	"promptlinter/internal/tokenizer"
 )
 
-// EngineConfig holds configurable thresholds for the engine.
-type EngineConfig struct {
-	TipThreshold      int  // wasted tokens >= this → RecommendTip
-	EscalateThreshold int  // wasted tokens >= this → RecommendEscalate
-	EscalateOnFlags   bool // whether indirect flags trigger escalation
-}
-
-// DefaultEngineConfig returns the standard thresholds.
-func DefaultEngineConfig() EngineConfig {
-	return EngineConfig{
-		TipThreshold:      20,
-		EscalateThreshold: 100,
-		EscalateOnFlags:   true,
-	}
-}
-
-// Recommendation indicates what action to take based on analysis results.
-type Recommendation int
-
-const (
-	RecommendLog      Recommendation = iota // < 20 wasted tokens, no flags
-	RecommendTip                            // 20-100 wasted tokens, no flags
-	RecommendEscalate                       // > 100 tokens OR has indirect flags
-)
-
-func (r Recommendation) String() string {
-	switch r {
-	case RecommendLog:
-		return "log"
-	case RecommendTip:
-		return "tip"
-	case RecommendEscalate:
-		return "escalate"
-	default:
-		return "unknown"
-	}
-}
-
 // EngineResult is the aggregate output from running all detectors.
 type EngineResult struct {
 	TotalWastedTokens int
 	Results           []*Result
-	Recommendation    Recommendation
 }
 
 // Issues flattens all issues from all detector results.
@@ -73,13 +34,11 @@ func (er *EngineResult) Flags() []Flag {
 // Engine runs all detectors in parallel and aggregates results.
 type Engine struct {
 	detectors []Detector
-	cfg       EngineConfig
 }
 
 // NewEngine creates an Engine with the standard set of detectors.
-func NewEngine(counter *tokenizer.Counter, cfg EngineConfig) *Engine {
+func NewEngine(counter *tokenizer.Counter) *Engine {
 	return &Engine{
-		cfg: cfg,
 		detectors: []Detector{
 			NewFillerDetector(counter),
 			NewMetaCommentaryDetector(counter),
@@ -122,20 +81,5 @@ func (e *Engine) Run(prompt string) (*EngineResult, error) {
 		engineResult.TotalWastedTokens += out.result.WastedTokens
 	}
 
-	engineResult.Recommendation = e.recommend(engineResult.TotalWastedTokens, engineResult.Flags())
-
 	return engineResult, nil
-}
-
-func (e *Engine) recommend(wastedTokens int, flags []Flag) Recommendation {
-	if wastedTokens >= e.cfg.EscalateThreshold {
-		return RecommendEscalate
-	}
-	if e.cfg.EscalateOnFlags && len(flags) > 0 {
-		return RecommendEscalate
-	}
-	if wastedTokens >= e.cfg.TipThreshold {
-		return RecommendTip
-	}
-	return RecommendLog
 }
