@@ -3,12 +3,21 @@ package hook
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"promptlinter/internal/config"
 	"promptlinter/internal/decision"
 )
+
+type errWriter struct{}
+
+func (errWriter) Write(p []byte) (int, error) {
+	return 0, errors.New("write failed")
+}
 
 func makeInput(prompt string) string {
 	b, _ := json.Marshal(HookInput{
@@ -136,5 +145,29 @@ func TestHandleAnalyze_MalformedJSON(t *testing.T) {
 	}
 	if !strings.Contains(stderr.String(), "failed to parse") {
 		t.Errorf("stderr = %q, want parse error message", stderr.String())
+	}
+}
+
+func TestHandleAnalyze_FallbackLogsWhenStderrWriteFails(t *testing.T) {
+	cfg := config.DefaultConfig()
+	stdin := strings.NewReader("not json at all")
+	var stdout bytes.Buffer
+
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	HandleAnalyze(cfg, stdin, &stdout, errWriter{})
+
+	if stdout.Len() != 0 {
+		t.Errorf("stdout = %q, want empty on error", stdout.String())
+	}
+
+	logPath := filepath.Join(home, ".promptlinter", "promptlinter.log")
+	data, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("failed to read fallback log: %v", err)
+	}
+	if !strings.Contains(string(data), "failed to parse hook input") {
+		t.Fatalf("log = %q, want parse error entry", string(data))
 	}
 }
