@@ -42,7 +42,7 @@ func New(cfg *config.Config) (*Analyzer, error) {
 	}
 
 	if cfg.LLMEnabled {
-		a.llm = llm.NewClaudeAnalyzer(cfg.LLMModel, counter)
+		a.llm = llm.NewClaudeAnalyzer(cfg.LLMModel)
 	}
 
 	return a, nil

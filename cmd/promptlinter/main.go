@@ -31,6 +31,11 @@ func analyzeCmd() *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Run: func(cmd *cobra.Command, args []string) {
+			// Guard against recursive invocation: when plint escalates to the LLM layer it
+			// shells out to `claude -p`, which fires the UserPromptSubmit hook again creating a loop.
+			if os.Getenv("PLINT_INTERNAL") != "" {
+				return
+			}
 			cfg, err := config.Load()
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "[PromptLinter] config error: %v\n", err)
