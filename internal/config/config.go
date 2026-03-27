@@ -14,7 +14,8 @@ type Config struct {
 	TipThreshold            int      `json:"tip_threshold"`
 	EscalationThreshold     int      `json:"escalation_threshold"`
 	EscalateOnIndirectFlags bool     `json:"escalate_on_indirect_flags"`
-	HaikuEnabled            bool     `json:"haiku_enabled"`
+	LLMEnabled              bool     `json:"llm_enabled"`
+	LLMModel                string   `json:"llm_model"`
 	DailyBudget             float64  `json:"haiku_daily_budget"`
 	IgnoredPatterns         []string `json:"ignored_patterns"`
 }
@@ -26,7 +27,8 @@ func DefaultConfig() *Config {
 		TipThreshold:            20,
 		EscalationThreshold:     100,
 		EscalateOnIndirectFlags: true,
-		HaikuEnabled:            false,
+		LLMEnabled:              false,
+		LLMModel:                "haiku",
 		DailyBudget:             0.10,
 		IgnoredPatterns:         []string{`^/`, `^y$|^n$|^yes$|^no$`},
 	}

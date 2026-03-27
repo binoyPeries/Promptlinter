@@ -80,12 +80,12 @@ func Decide(cfg *config.Config, ar *analyzer.AnalysisResult) *Result {
 }
 
 // formatFeedback produces a feedback string with separate sections for
-// token waste (issues) and structural warnings (flags).
+// token waste (issues), structural warnings (flags), and AI analysis suggestion.
 func formatFeedback(result *analyzer.AnalysisResult) string {
 	var parts []string
 
 	if len(result.Issues) > 0 {
-		parts = append(parts, fmt.Sprintf("[PromptLinter] ~%d tokens wasted.", result.WastedTokens))
+		parts = append(parts, fmt.Sprintf("[PromptLinter] Rules: ~%d tokens wasted.", result.WastedTokens))
 		for _, issue := range result.Issues {
 			parts = append(parts, fmt.Sprintf("  - %s: %q → %s", issue.Type, issue.Match, issue.Suggestion))
 		}
@@ -96,6 +96,15 @@ func formatFeedback(result *analyzer.AnalysisResult) string {
 		for _, flag := range result.Flags {
 			parts = append(parts, fmt.Sprintf("  - %s", flag.Description))
 		}
+	}
+
+	if result.LLMSuggestion != "" {
+		parts = append(parts, fmt.Sprintf("[PromptLinter] AI analysis: ~%d tokens saved.", result.TokensSaved))
+		parts = append(parts, fmt.Sprintf("  Suggestion:\n  %s", result.LLMSuggestion))
+	}
+
+	if result.LLMError != "" {
+		parts = append(parts, fmt.Sprintf("[PromptLinter] AI analysis failed: %s", result.LLMError))
 	}
 
 	return strings.Join(parts, "\n")

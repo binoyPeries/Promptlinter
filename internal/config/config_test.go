@@ -21,8 +21,11 @@ func TestDefaultConfig(t *testing.T) {
 	if !cfg.EscalateOnIndirectFlags {
 		t.Error("EscalateOnIndirectFlags = false, want true")
 	}
-	if cfg.HaikuEnabled {
-		t.Error("HaikuEnabled = true, want false")
+	if cfg.LLMEnabled {
+		t.Error("LLMEnabled = true, want false")
+	}
+	if cfg.LLMModel != "haiku" {
+		t.Errorf("LLMModel = %q, want %q", cfg.LLMModel, "haiku")
 	}
 	if cfg.DailyBudget != 0.10 {
 		t.Errorf("DailyBudget = %f, want 0.10", cfg.DailyBudget)
@@ -50,7 +53,8 @@ func TestLoadFrom_ValidFile(t *testing.T) {
 		"tip_threshold": 30,
 		"escalation_threshold": 80,
 		"escalate_on_indirect_flags": false,
-		"haiku_enabled": true,
+		"llm_enabled": true,
+		"llm_model": "sonnet",
 		"haiku_daily_budget": 0.05,
 		"ignored_patterns": ["^/test"]
 	}`
@@ -75,8 +79,11 @@ func TestLoadFrom_ValidFile(t *testing.T) {
 	if cfg.EscalateOnIndirectFlags {
 		t.Error("EscalateOnIndirectFlags = true, want false")
 	}
-	if !cfg.HaikuEnabled {
-		t.Error("HaikuEnabled = false, want true")
+	if !cfg.LLMEnabled {
+		t.Error("LLMEnabled = false, want true")
+	}
+	if cfg.LLMModel != "sonnet" {
+		t.Errorf("LLMModel = %q, want %q", cfg.LLMModel, "sonnet")
 	}
 	if cfg.DailyBudget != 0.05 {
 		t.Errorf("DailyBudget = %f, want 0.05", cfg.DailyBudget)
