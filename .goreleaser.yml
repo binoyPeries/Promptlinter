@@ -1,0 +1,25 @@
+version: 2
+
+builds:
+  - main: ./cmd/promptlinter
+    binary: plint
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - format: tar.gz
+    name_template: "plint-{{ .Os }}-{{ .Arch }}"
+
+changelog:
+  sort: asc
+
+release:
+  github:
+    owner: binoyPeries
+    name: Promptlinter
