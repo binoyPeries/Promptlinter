@@ -1,10 +1,25 @@
 # PromptLinter
 
-A real-time prompt efficiency analyzer and coach for Claude Code users. Intercepts prompts before they reach Claude, detects waste, suggests concise rewrites, and tracks your prompt quality over time with detailed reports.
+PromptLinter is a lightweight CLI hook for Claude Code that catches prompt waste before it gets sent.
 
-## Installation
+It helps you write clearer prompts with fewer tokens, fewer clarification turns, and less back-and-forth.
 
-### 1. Download the binary
+Think of it as a small guardrail for your prompts: fast feedback before the expensive part happens.
+
+## Why it exists
+
+- Dev prompts often include filler, vague references, and oversized context dumps.
+- That burns tokens and adds extra turns you did not need.
+- PromptLinter gives immediate feedback so you can tighten the prompt before it reaches Claude.
+
+## What you get
+
+- `⚡` Fast: runs on each prompt as a small Go binary.
+- `🛠️` Practical: feedback is short, direct, and useful.
+- `🔒` Local-first: rules engine works without external API calls.
+- `🎛️` Flexible: `suggest`, `silent`, and `auto` modes.
+
+## Install
 
 Download the latest release for your platform from the [Releases page](https://github.com/binoyPeries/Promptlinter/releases).
 
@@ -34,12 +49,23 @@ tar xzf plint.tar.gz
 sudo mkdir -p /usr/local/bin && sudo mv plint /usr/local/bin/
 ```
 
+**Windows (PowerShell):**
+```powershell
+$VERSION = "vX.Y.Z"  # e.g. v0.1.0
+Invoke-WebRequest -OutFile plint.zip "https://github.com/binoyPeries/Promptlinter/releases/download/$VERSION/plint-windows-amd64.zip"
+Expand-Archive plint.zip -DestinationPath .
+New-Item -ItemType Directory -Force "$HOME\\bin" | Out-Null
+Move-Item .\\plint.exe "$HOME\\bin\\plint.exe" -Force
+```
+
+Add `$HOME\bin` to your `PATH` if it is not already there.
+
 Verify the installation:
 ```bash
 plint --help
 ```
 
-### 2. Connect to Claude Code
+## Connect to Claude Code
 
 Add the following hook to your Claude Code settings file (`~/.claude/settings.json`):
 
@@ -63,10 +89,10 @@ Add the following hook to your Claude Code settings file (`~/.claude/settings.js
 
 This tells Claude Code to run `plint analyze` on every prompt you submit. PromptLinter reads the prompt from stdin, analyzes it, and returns feedback.
 
-### 3. Modes
+## Modes
 
-PromptLinter runs in **suggest** mode by default — it shows tips on stderr without blocking your prompt. You can change the mode in `~/.prompt-optimizer/config.json`:
+PromptLinter runs in `suggest` mode by default. Configure it in `~/.promptlinter/config.json`:
 
-- `suggest` — inline tips shown before the prompt runs (default)
+- `suggest` — tips on stderr; prompt still goes through (default)
 - `silent` — logs analysis results only, no visible output
 - `auto` — blocks wasteful prompts and asks you to retype
