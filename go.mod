@@ -1,6 +1,6 @@
 module promptlinter
 
-go 1.25.6
+go 1.26.1
 
 require (
 	github.com/pkoukk/tiktoken-go v0.1.8
