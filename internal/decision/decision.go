@@ -56,10 +56,10 @@ func hasFeedback(cfg *config.Config, ar *analyzer.AnalysisResult) bool {
 // Decide takes analysis results and config mode, returns the decision.
 func Decide(cfg *config.Config, ar *analyzer.AnalysisResult) *Result {
 	switch cfg.Mode {
-	case "silent":
+	case config.ModeOff, config.ModeSilent:
 		return &Result{Action: ActionPass}
 
-	case "auto":
+	case config.ModeAuto:
 		if shouldBlock(cfg, ar) {
 			return &Result{
 				Action: ActionBlock,

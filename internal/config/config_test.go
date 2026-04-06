@@ -9,7 +9,7 @@ import (
 func TestDefaultConfig(t *testing.T) {
 	cfg := DefaultConfig()
 
-	if cfg.Mode != "suggest" {
+	if cfg.Mode != ModeSuggest {
 		t.Errorf("Mode = %q, want %q", cfg.Mode, "suggest")
 	}
 	if cfg.TipThreshold != 20 {
@@ -40,7 +40,7 @@ func TestLoadFrom_MissingFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if cfg.Mode != "suggest" {
+	if cfg.Mode != ModeSuggest {
 		t.Errorf("Mode = %q, want default %q", cfg.Mode, "suggest")
 	}
 }
@@ -67,7 +67,7 @@ func TestLoadFrom_ValidFile(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if cfg.Mode != "auto" {
+	if cfg.Mode != ModeAuto {
 		t.Errorf("Mode = %q, want %q", cfg.Mode, "auto")
 	}
 	if cfg.TipThreshold != 30 {
@@ -119,7 +119,7 @@ func TestLoadFrom_PartialJSON(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if cfg.Mode != "silent" {
+	if cfg.Mode != ModeSilent {
 		t.Errorf("Mode = %q, want %q", cfg.Mode, "silent")
 	}
 	// Unset fields should retain defaults.

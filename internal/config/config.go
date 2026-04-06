@@ -8,9 +8,19 @@ import (
 	"path/filepath"
 )
 
+// Mode represents the operating mode for the linter.
+type Mode string
+
+const (
+	ModeSuggest Mode = "suggest"
+	ModeSilent  Mode = "silent"
+	ModeAuto    Mode = "auto"
+	ModeOff     Mode = "off"
+)
+
 // Config holds all user-configurable settings.
 type Config struct {
-	Mode                    string   `json:"mode"`
+	Mode                    Mode     `json:"mode"`
 	TipThreshold            int      `json:"tip_threshold"`
 	EscalationThreshold     int      `json:"escalation_threshold"`
 	EscalateOnIndirectFlags bool     `json:"escalate_on_indirect_flags"`
@@ -23,7 +33,7 @@ type Config struct {
 // DefaultConfig returns a Config with sensible defaults.
 func DefaultConfig() *Config {
 	return &Config{
-		Mode:                    "suggest",
+		Mode:                    ModeSuggest,
 		TipThreshold:            20,
 		EscalationThreshold:     100,
 		EscalateOnIndirectFlags: true,

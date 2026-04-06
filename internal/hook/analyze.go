@@ -30,6 +30,10 @@ func HandleAnalyze(cfg *config.Config, stdin io.Reader, stdout io.Writer, stderr
 		return
 	}
 
+	if cfg.Mode == config.ModeOff {
+		return
+	}
+
 	if shouldIgnore(cfg, input.Prompt) {
 		return
 	}

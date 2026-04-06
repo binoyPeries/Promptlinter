@@ -8,7 +8,7 @@ import (
 	"promptlinter/internal/config"
 )
 
-func modeCfg(mode string) *config.Config {
+func modeCfg(mode config.Mode) *config.Config {
 	c := config.DefaultConfig()
 	c.Mode = mode
 	return c
@@ -31,11 +31,22 @@ var sampleFlags = []rules.Flag{
 	{Type: "vague_reference", Match: "the file", Description: "No file path specified"},
 }
 
+// --- Off mode: always pass ---
+
+func TestDecide_OffMode(t *testing.T) {
+	for _, wasted := range []int{0, 30, 150} {
+		r := Decide(modeCfg(config.ModeOff), makeResult(wasted, sampleIssues, sampleFlags))
+		if r.Action != ActionPass {
+			t.Errorf("off/wasted=%d: action = %d, want ActionPass", wasted, r.Action)
+		}
+	}
+}
+
 // --- Silent mode: always pass ---
 
 func TestDecide_SilentMode(t *testing.T) {
 	for _, wasted := range []int{0, 30, 150} {
-		r := Decide(modeCfg("silent"), makeResult(wasted, sampleIssues, sampleFlags))
+		r := Decide(modeCfg(config.ModeSilent), makeResult(wasted, sampleIssues, sampleFlags))
 		if r.Action != ActionPass {
 			t.Errorf("silent/wasted=%d: action = %d, want ActionPass", wasted, r.Action)
 		}
@@ -45,14 +56,14 @@ func TestDecide_SilentMode(t *testing.T) {
 // --- Suggest mode: feedback to stderr based on thresholds ---
 
 func TestDecide_SuggestMode_LowWaste(t *testing.T) {
-	r := Decide(modeCfg("suggest"), makeResult(5, nil, nil))
+	r := Decide(modeCfg(config.ModeSuggest), makeResult(5, nil, nil))
 	if r.Action != ActionPass {
 		t.Errorf("action = %d, want ActionPass", r.Action)
 	}
 }
 
 func TestDecide_SuggestMode_MildWaste(t *testing.T) {
-	r := Decide(modeCfg("suggest"), makeResult(30, sampleIssues, nil))
+	r := Decide(modeCfg(config.ModeSuggest), makeResult(30, sampleIssues, nil))
 	if r.Action != ActionTip {
 		t.Errorf("action = %d, want ActionTip", r.Action)
 	}
@@ -66,14 +77,14 @@ func TestDecide_SuggestMode_MildWaste(t *testing.T) {
 
 func TestDecide_SuggestMode_FlagsOnly(t *testing.T) {
 	// Low waste but flags present — should still show feedback.
-	r := Decide(modeCfg("suggest"), makeResult(5, nil, sampleFlags))
+	r := Decide(modeCfg(config.ModeSuggest), makeResult(5, nil, sampleFlags))
 	if r.Action != ActionTip {
 		t.Errorf("action = %d, want ActionTip for flags", r.Action)
 	}
 }
 
 func TestDecide_SuggestMode_HighWaste(t *testing.T) {
-	r := Decide(modeCfg("suggest"), makeResult(120, sampleIssues, sampleFlags))
+	r := Decide(modeCfg(config.ModeSuggest), makeResult(120, sampleIssues, sampleFlags))
 	if r.Action != ActionTip {
 		t.Errorf("action = %d, want ActionTip", r.Action)
 	}
@@ -85,7 +96,7 @@ func TestDecide_SuggestMode_HighWaste(t *testing.T) {
 // --- Auto mode: block on high waste/flags, pass otherwise ---
 
 func TestDecide_AutoMode_LowWaste(t *testing.T) {
-	r := Decide(modeCfg("auto"), makeResult(5, nil, nil))
+	r := Decide(modeCfg(config.ModeAuto), makeResult(5, nil, nil))
 	if r.Action != ActionPass {
 		t.Errorf("action = %d, want ActionPass", r.Action)
 	}
@@ -93,14 +104,14 @@ func TestDecide_AutoMode_LowWaste(t *testing.T) {
 
 func TestDecide_AutoMode_MildWaste(t *testing.T) {
 	// Below escalation threshold, no flags — pass in auto.
-	r := Decide(modeCfg("auto"), makeResult(30, sampleIssues, nil))
+	r := Decide(modeCfg(config.ModeAuto), makeResult(30, sampleIssues, nil))
 	if r.Action != ActionPass {
 		t.Errorf("action = %d, want ActionPass (below escalation threshold)", r.Action)
 	}
 }
 
 func TestDecide_AutoMode_HighWaste(t *testing.T) {
-	r := Decide(modeCfg("auto"), makeResult(120, sampleIssues, nil))
+	r := Decide(modeCfg(config.ModeAuto), makeResult(120, sampleIssues, nil))
 	if r.Action != ActionBlock {
 		t.Errorf("action = %d, want ActionBlock", r.Action)
 	}
@@ -117,14 +128,14 @@ func TestDecide_AutoMode_HighWaste(t *testing.T) {
 
 func TestDecide_AutoMode_FlagsBlock(t *testing.T) {
 	// Low waste but flags present — should block in auto with EscalateOnFlags.
-	r := Decide(modeCfg("auto"), makeResult(5, nil, sampleFlags))
+	r := Decide(modeCfg(config.ModeAuto), makeResult(5, nil, sampleFlags))
 	if r.Action != ActionBlock {
 		t.Errorf("action = %d, want ActionBlock due to flags", r.Action)
 	}
 }
 
 func TestDecide_AutoMode_FlagsDisabled(t *testing.T) {
-	cfg := modeCfg("auto")
+	cfg := modeCfg(config.ModeAuto)
 	cfg.EscalateOnIndirectFlags = false
 	// Low waste + flags, but EscalateOnFlags is off — should pass.
 	r := Decide(cfg, makeResult(5, nil, sampleFlags))

@@ -61,7 +61,7 @@ func TestHandleAnalyze_FillerPrompt_Tip(t *testing.T) {
 
 func TestHandleAnalyze_AutoMode_Block(t *testing.T) {
 	cfg := config.DefaultConfig()
-	cfg.Mode = "auto"
+	cfg.Mode = config.ModeAuto
 	cfg.EscalateOnIndirectFlags = true
 
 	// "the file" triggers vague_reference flag → block in auto mode
@@ -86,9 +86,25 @@ func TestHandleAnalyze_AutoMode_Block(t *testing.T) {
 	}
 }
 
+func TestHandleAnalyze_OffMode(t *testing.T) {
+	cfg := config.DefaultConfig()
+	cfg.Mode = config.ModeOff
+	stdin := strings.NewReader(makeInput("Can you please look at the code and fix it, thanks"))
+	var stdout, stderr bytes.Buffer
+
+	HandleAnalyze(cfg, stdin, &stdout, &stderr)
+
+	if stdout.Len() != 0 {
+		t.Errorf("stdout = %q, want empty for off mode", stdout.String())
+	}
+	if stderr.Len() != 0 {
+		t.Errorf("stderr = %q, want empty for off mode", stderr.String())
+	}
+}
+
 func TestHandleAnalyze_SilentMode(t *testing.T) {
 	cfg := config.DefaultConfig()
-	cfg.Mode = "silent"
+	cfg.Mode = config.ModeSilent
 	stdin := strings.NewReader(makeInput("Can you please look at the code and fix it, thanks"))
 	var stdout, stderr bytes.Buffer
 
