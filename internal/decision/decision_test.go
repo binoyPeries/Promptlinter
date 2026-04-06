@@ -1,6 +1,7 @@
 package decision
 
 import (
+	"strings"
 	"testing"
 
 	"promptlinter/internal/analyzer"
@@ -141,5 +142,71 @@ func TestDecide_AutoMode_FlagsDisabled(t *testing.T) {
 	r := Decide(cfg, makeResult(5, nil, sampleFlags))
 	if r.Action != ActionPass {
 		t.Errorf("action = %d, want ActionPass with flags disabled", r.Action)
+	}
+}
+
+// --- Format tests ---
+
+func TestFormatFeedback_CompactHeader(t *testing.T) {
+	result := &analyzer.AnalysisResult{
+		WastedTokens: 5,
+		Issues:       sampleIssues,
+		Flags:        sampleFlags,
+	}
+	out := formatFeedback(result)
+
+	if !strings.HasPrefix(out, "⚡ PromptLinter") {
+		t.Error("missing header prefix")
+	}
+	if strings.Contains(out, "tokens saved") {
+		t.Error("should not show token count when <= threshold")
+	}
+	if !strings.Contains(out, "• Drop \"please\" (filler)") {
+		t.Errorf("missing issue bullet, got:\n%s", out)
+	}
+	if !strings.Contains(out, "• No file path specified (vague_reference)") {
+		t.Errorf("missing flag bullet, got:\n%s", out)
+	}
+}
+
+func TestFormatFeedback_ShowsTokensWhenSignificant(t *testing.T) {
+	result := &analyzer.AnalysisResult{
+		WastedTokens: 25,
+		Issues:       sampleIssues,
+	}
+	out := formatFeedback(result)
+
+	if !strings.Contains(out, "~25 tokens saved") {
+		t.Errorf("should show tokens when > threshold, got:\n%s", out)
+	}
+}
+
+func TestFormatFeedback_LLMSuggestion(t *testing.T) {
+	result := &analyzer.AnalysisResult{
+		WastedTokens:  5,
+		Issues:        sampleIssues,
+		LLMSuggestion: "Fix the auth bug in login.go",
+		TokensSaved:   15,
+	}
+	out := formatFeedback(result)
+
+	if !strings.Contains(out, "💡 Try: Fix the auth bug in login.go") {
+		t.Errorf("missing LLM suggestion, got:\n%s", out)
+	}
+	if !strings.Contains(out, "~15 tokens saved") {
+		t.Errorf("should show LLM token count, got:\n%s", out)
+	}
+}
+
+func TestFormatFeedback_LLMError(t *testing.T) {
+	result := &analyzer.AnalysisResult{
+		WastedTokens: 5,
+		Issues:       sampleIssues,
+		LLMError:     "timeout",
+	}
+	out := formatFeedback(result)
+
+	if !strings.Contains(out, "⚠ AI analysis failed: timeout") {
+		t.Errorf("missing LLM error, got:\n%s", out)
 	}
 }

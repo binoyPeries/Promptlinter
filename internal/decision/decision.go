@@ -79,33 +79,46 @@ func Decide(cfg *config.Config, ar *analyzer.AnalysisResult) *Result {
 	}
 }
 
-// formatFeedback produces a feedback string with separate sections for
-// token waste (issues), structural warnings (flags), and AI analysis suggestion.
+// tokenDisplayThreshold is the minimum token count to show in the header.
+const tokenDisplayThreshold = 10
+
+// formatFeedback produces a compact feedback string with a single header,
+// bullet-pointed issues/flags, and an LLM suggestion.
 func formatFeedback(result *analyzer.AnalysisResult) string {
-	var parts []string
+	var lines []string
 
-	if len(result.Issues) > 0 {
-		parts = append(parts, fmt.Sprintf("[PromptLinter] Rules: ~%d tokens wasted.", result.WastedTokens))
-		for _, issue := range result.Issues {
-			parts = append(parts, fmt.Sprintf("  - %s: %q → %s", issue.Type, issue.Match, issue.Suggestion))
-		}
+	// Header: issue count + token savings (only if significant).
+	issueCount := len(result.Issues) + len(result.Flags)
+	tokensSaved := result.TokensSaved
+	if tokensSaved == 0 {
+		tokensSaved = result.WastedTokens
+	}
+	if tokensSaved > tokenDisplayThreshold {
+		lines = append(lines, fmt.Sprintf("⚡ PromptLinter — %d issues, ~%d tokens saved", issueCount, tokensSaved))
+	} else {
+		lines = append(lines, fmt.Sprintf("⚡ PromptLinter — %d issues", issueCount))
 	}
 
-	if len(result.Flags) > 0 {
-		parts = append(parts, "[PromptLinter] Prompt quality warnings:")
-		for _, flag := range result.Flags {
-			parts = append(parts, fmt.Sprintf("  - %s", flag.Description))
-		}
+	// Issues (from rules engine).
+	for _, issue := range result.Issues {
+		lines = append(lines, fmt.Sprintf("  • %s (%s)", issue.Suggestion, issue.Type))
 	}
 
+	// Flags (quality warnings).
+	for _, flag := range result.Flags {
+		lines = append(lines, fmt.Sprintf("  • %s (%s)", flag.Description, flag.Type))
+	}
+
+	// LLM suggestion.
 	if result.LLMSuggestion != "" {
-		parts = append(parts, fmt.Sprintf("[PromptLinter] AI analysis: ~%d tokens saved.", result.TokensSaved))
-		parts = append(parts, fmt.Sprintf("  Suggestion:\n  %s", result.LLMSuggestion))
+		lines = append(lines, "")
+		lines = append(lines, fmt.Sprintf("  💡 Try: %s", result.LLMSuggestion))
 	}
 
+	// LLM error.
 	if result.LLMError != "" {
-		parts = append(parts, fmt.Sprintf("[PromptLinter] AI analysis failed: %s", result.LLMError))
+		lines = append(lines, fmt.Sprintf("  ⚠ AI analysis failed: %s", result.LLMError))
 	}
 
-	return strings.Join(parts, "\n")
+	return strings.Join(lines, "\n")
 }
