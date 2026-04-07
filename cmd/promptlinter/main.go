@@ -21,6 +21,7 @@ func main() {
 
 	root.AddCommand(analyzeCmd())
 	root.AddCommand(versionCmd())
+	root.AddCommand(modeCmd())
 
 	if err := root.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -34,6 +35,30 @@ func versionCmd() *cobra.Command {
 		Short: "Print the installed version",
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Println(version)
+		},
+	}
+}
+
+func modeCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:           "mode <suggest|silent|auto|off>",
+		Short:         "Set the linter operating mode",
+		Args:          cobra.ExactArgs(1),
+		SilenceUsage:  true,
+		SilenceErrors: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			m := config.Mode(args[0])
+			switch m {
+			case config.ModeSuggest, config.ModeSilent, config.ModeAuto, config.ModeOff:
+				// valid
+			default:
+				return fmt.Errorf("invalid mode %q — must be one of: suggest, silent, auto, off", args[0])
+			}
+			if err := config.SetMode(m); err != nil {
+				return fmt.Errorf("failed to save mode: %w", err)
+			}
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Mode set to: %s\n", m)
+			return nil
 		},
 	}
 }

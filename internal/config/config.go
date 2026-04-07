@@ -86,6 +86,28 @@ func Load() (*Config, error) {
 	return cfg, nil
 }
 
+// SetMode loads the current config, updates the mode, and saves it back.
+func SetMode(m Mode) error {
+	dir, err := ConfigDir()
+	if err != nil {
+		return fmt.Errorf("failed to resolve config directory: %w", err)
+	}
+	cfgPath := filepath.Join(dir, "config.json")
+	cfg, err := LoadFrom(cfgPath)
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+	cfg.Mode = m
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to serialize config: %w", err)
+	}
+	if err := os.WriteFile(cfgPath, data, 0o644); err != nil {
+		return fmt.Errorf("failed to write config file: %w", err)
+	}
+	return nil
+}
+
 // writeDefaults writes the given config to path as indented JSON.
 func writeDefaults(path string, cfg *Config) error {
 	data, err := json.MarshalIndent(cfg, "", "  ")
