@@ -26,8 +26,8 @@ func NewClaudeAnalyzer(model string) *ClaudeAnalyzer {
 
 // claudeOutput matches the JSON structure returned by `claude -p --output-format json`.
 type claudeOutput struct {
-	TotalCost        float64   `json:"total_cost_usd"`
-	IsError          bool      `json:"is_error"`
+	TotalCost        float64    `json:"total_cost_usd"`
+	IsError          bool       `json:"is_error"`
 	StructuredOutput *llmResult `json:"structured_output"`
 }
 

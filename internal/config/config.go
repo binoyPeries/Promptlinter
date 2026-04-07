@@ -112,4 +112,3 @@ func LoadFrom(path string) (*Config, error) {
 	}
 	return cfg, nil
 }
-
