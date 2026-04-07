@@ -23,9 +23,11 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+          
+      - name: Run linter
+        run: make lint
 
       - name: Run tests
         run: make test
 
-      - name: Run linter
-        run: make lint
+
