@@ -17,7 +17,7 @@ Think of it as a small guardrail for your prompts: fast feedback before the expe
 - `⚡` Fast: runs on each prompt as a small Go binary.
 - `🛠️` Practical: feedback is short, direct, and useful.
 - `🔒` Local-first: rules engine works without external API calls.
-- `🎛️` Flexible: `suggest`, `silent`, and `auto` modes.
+- `🎛️` Flexible: `suggest`, `silent`, `auto`, and `off` modes.
 
 ## Install
 
@@ -89,6 +89,29 @@ Add the following hook to your Claude Code settings file (`~/.claude/settings.js
 
 This tells Claude Code to run `plint analyze` on every prompt you submit. PromptLinter reads the prompt from stdin, analyzes it, and returns feedback.
 
+## How It Works
+
+PromptLinter uses a hybrid analysis system:
+
+**Layer 1 — Rules Engine** (always on): Fast, local, zero-cost regex and heuristic detectors that run in ~5ms. Catches filler language, meta-commentary, oversized context dumps, vague references, and over-specification.
+
+**Layer 2 — LLM Analysis** (opt-in): When Layer 1 detects high waste (above the escalation threshold) or structural flags, the prompt is escalated to an LLM for deeper, context-aware analysis. The LLM validates Layer 1 findings, catches issues rules miss (ambiguity, missing context), and suggests a concise rewrite. This runs through the Claude Code CLI, using your existing plan — no separate API key or setup needed.
+
+To enable Layer 2, set `llm_enabled` to `true` in `~/.promptlinter/config.json`:
+
+```json
+{
+  "llm_enabled": true,
+  "llm_model": "haiku",
+  "escalation_threshold": 100,
+  "escalate_on_indirect_flags": true
+}
+```
+
+The `llm_model` field accepts any model supported by the Claude CLI (e.g. `haiku`, `sonnet`, `opus`). Defaults to `haiku` for speed and cost.
+
+Layer 2 is non-blocking — if the LLM call fails or times out, PromptLinter falls back to Layer 1 results.
+
 ## Modes
 
 PromptLinter runs in `suggest` mode by default. Configure it in `~/.promptlinter/config.json`:
@@ -96,3 +119,4 @@ PromptLinter runs in `suggest` mode by default. Configure it in `~/.promptlinter
 - `suggest` — tips on stderr; prompt still goes through (default)
 - `silent` — logs analysis results only, no visible output
 - `auto` — blocks wasteful prompts and asks you to retype
+- `off` — disables the linter entirely; all prompts pass through untouched
