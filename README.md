@@ -1,5 +1,8 @@
 # PromptLinter
 
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Go Report Card](https://goreportcard.com/badge/github.com/binoyPeries/Promptlinter)](https://goreportcard.com/report/github.com/binoyPeries/Promptlinter)
+
 PromptLinter is a lightweight CLI hook for Claude Code that catches prompt waste before it gets sent.
 
 It helps you write clearer prompts with fewer tokens, fewer clarification turns, and less back-and-forth.
