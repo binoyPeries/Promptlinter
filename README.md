@@ -116,7 +116,7 @@ Layer 2 is non-blocking — if the LLM call fails or times out, PromptLinter fal
 
 PromptLinter runs in `suggest` mode by default. Configure it in `~/.promptlinter/config.json`:
 
-- `suggest` — tips on stderr; prompt still goes through (default)
+- `suggest` — tips shown as a Claude Code system message; prompt still goes through (default)
 - `silent` — logs analysis results only, no visible output
 - `auto` — blocks wasteful prompts and asks you to retype
 - `off` — disables the linter entirely; all prompts pass through untouched
