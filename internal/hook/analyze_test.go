@@ -51,11 +51,22 @@ func TestHandleAnalyze_FillerPrompt_Tip(t *testing.T) {
 
 	HandleAnalyze(cfg, stdin, &stdout, &stderr)
 
-	if stdout.Len() != 0 {
-		t.Errorf("stdout = %q, want empty for suggest mode", stdout.String())
+	if stderr.Len() != 0 {
+		t.Errorf("stderr = %q, want empty for suggest mode", stderr.String())
 	}
-	if !strings.Contains(stderr.String(), "PromptLinter") {
-		t.Errorf("stderr = %q, want PromptLinter feedback", stderr.String())
+
+	var tip struct {
+		SystemMessage  string `json:"systemMessage"`
+		SuppressOutput bool   `json:"suppressOutput"`
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &tip); err != nil {
+		t.Fatalf("failed to parse tip JSON: %v (stdout=%q)", err, stdout.String())
+	}
+	if !strings.Contains(tip.SystemMessage, "PromptLinter") {
+		t.Errorf("systemMessage = %q, want PromptLinter feedback", tip.SystemMessage)
+	}
+	if !tip.SuppressOutput {
+		t.Error("suppressOutput = false, want true")
 	}
 }
 

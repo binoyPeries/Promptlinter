@@ -54,7 +54,14 @@ func HandleAnalyze(cfg *config.Config, stdin io.Reader, stdout io.Writer, stderr
 
 	switch d.Action {
 	case decision.ActionTip:
-		if _, err := fmt.Fprintln(stderr, d.Tip); err != nil {
+		tipOut := struct {
+			SystemMessage  string `json:"systemMessage"`
+			SuppressOutput bool   `json:"suppressOutput"`
+		}{
+			SystemMessage:  d.Tip,
+			SuppressOutput: true,
+		}
+		if err := json.NewEncoder(stdout).Encode(tipOut); err != nil {
 			reportInternalError(stderr, "failed to write tip output: %v", err)
 			return
 		}
