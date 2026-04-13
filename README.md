@@ -116,3 +116,11 @@ PromptLinter runs in `suggest` mode by default. Configure it in `~/.promptlinter
 - `silent` — logs analysis results only, no visible output
 - `auto` — blocks wasteful prompts and asks you to retype
 - `off` — disables the linter entirely; all prompts pass through untouched
+
+## What's Next
+
+Planned features on the roadmap:
+
+- **SQLite event logging** — persist every analysis result to a local `~/.promptlinter/events.db` database across sessions, tracking prompts, tool calls, and session summaries.
+- **CLI reports** — `plint report` command with daily/weekly/monthly summaries of token waste, trends, and improvement over time. Supports text, JSON, CSV, and HTML output.
+- **Multi-tool support** — adapter layer to bring prompt linting to Cursor, Aider, Cline, GitHub Copilot, Windsurf, Gemini CLI, and more. Each tool gets a thin adapter behind a common interface; a generic stdin mode works with anything.
