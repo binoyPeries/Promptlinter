@@ -40,9 +40,31 @@ func versionCmd() *cobra.Command {
 }
 
 func modeCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:           "mode",
+		Short:         "View and manage the linter operating mode",
+		SilenceUsage:  true,
+		SilenceErrors: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.Load()
+			if err != nil {
+				return fmt.Errorf("failed to load config: %w", err)
+			}
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Current mode: %s\n", cfg.Mode)
+			return nil
+		},
+	}
+
+	cmd.AddCommand(modeSetCmd())
+	cmd.AddCommand(modeListCmd())
+
+	return cmd
+}
+
+func modeSetCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:           "mode <suggest|silent|auto|off>",
-		Short:         "Set the linter operating mode",
+		Use:           "set <suggest|silent|auto|off>",
+		Short:         "Set the operating mode",
 		Args:          cobra.ExactArgs(1),
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -58,6 +80,27 @@ func modeCmd() *cobra.Command {
 				return fmt.Errorf("failed to save mode: %w", err)
 			}
 			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Mode set to: %s\n", m)
+			return nil
+		},
+	}
+}
+
+func modeListCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "list",
+		Short: "List all available modes",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.Load()
+			if err != nil {
+				return fmt.Errorf("failed to load config: %w", err)
+			}
+			for _, m := range config.ValidModes() {
+				marker := "  "
+				if m == cfg.Mode {
+					marker = "* "
+				}
+				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%s%s\n", marker, m)
+			}
 			return nil
 		},
 	}

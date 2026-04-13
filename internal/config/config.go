@@ -18,6 +18,11 @@ const (
 	ModeOff     Mode = "off"
 )
 
+// ValidModes returns all valid operating modes.
+func ValidModes() []Mode {
+	return []Mode{ModeAuto, ModeOff, ModeSilent, ModeSuggest}
+}
+
 // Config holds all user-configurable settings.
 type Config struct {
 	Mode                    Mode     `json:"mode"`
