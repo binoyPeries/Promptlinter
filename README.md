@@ -10,6 +10,10 @@ It helps you write clearer prompts with fewer tokens, fewer clarification turns,
 
 Think of it as a small guardrail for your prompts: fast feedback before the expensive part happens.
 
+<p align="center">
+  <img src="docs/media/demo-vid.gif" alt="PromptLinter demo">
+</p>
+
 ## Why it exists
 
 - Dev prompts often include filler, vague references, and oversized context dumps.
